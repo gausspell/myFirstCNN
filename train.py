@@ -7,11 +7,11 @@ def initialize_weights(path="default"):
         #load weights
         print('hello')
     else:
-        
-        weights.append(np.zeros((16,3,3)))
-        weights.append(np.zeros((16,3,3)))
-        weights.append(np.zeros((32,6400)))
-        weights.append(np.zeros((10,32)))
+        alpha0 = 0.001
+        weights.append(alpha0*np.ones((16,3,3)))
+        weights.append(alpha0*np.ones((16,3,3)))
+        weights.append(alpha0*np.ones((32,6400)))
+        weights.append(alpha0*np.ones((10,32)))
 
     return weights
 
@@ -37,7 +37,7 @@ def conv2d(x,filters):
 def run_network(x,weights):
     #architecture
     output = relu(conv2d(x,weights[0]))
-    output = relu(conv2d(x,weights[1]))
+    output = relu(conv2d(output,weights[1]))
     output = output.flatten()
     print(output.shape)
     output = relu(np.dot(weights[2],output))
@@ -50,11 +50,11 @@ def d_relu(x):
     relufunc = np.vectorize(activate)
     return relufunc(x)       
 
-def d_softmax(x):
-        
+#def d_softmax(x):
     
     
-def upgrade_network(x,y,weights):
+    
+def upgrade_network(x,y,weights,lrate):
     print('todo')
     #conv1
     x0 = conv2d(x,weights[0])
@@ -66,18 +66,44 @@ def upgrade_network(x,y,weights):
     y1 = relu(x1)
     s1 = d_relu(x1)
     
+    y1_flatten = y1.flatten()
+    
     #dense
-    x2 = np.dot(weights[2],y1)
+    x2 = np.dot(weights[2],y1_flatten)
     y2 = relu(x2)
     s2 = d_relu(x2)
     
     #softmax
-    x3 = np.dot(weights[2],y2)
+    x3 = np.dot(weights[3],y2)
     y3 = relu(x3)
     s3 = d_relu(x3)
     
-    d3 = y3- y
-    g3 = np.dot(d3,s3)
+    #back propagation
+    d3 = y3 - y
+    delta3 = np.dot(y3.T,d3)
+    gamma2 = np.dot(y2.T,delta3)
+    
+    d2 = s2 * gamma2
+    delta2 = np.dot(y2.T,d2)
+    gamma1_flatten = np.dot(y1.T,delta2)
+    
+    #unflatten    
+    gamma1 = gamma1_flatten(y1.shape[0],-1)
+         
+    d1 = s1*gamma1
+    delta1 = conv2d(y1,gamma1)
+    gamma0 = conv2d(delta1,weights[1].T)
+    
+    d0 = s0*gamma0
+    delta0 = conv2(y0,gamma0)
+    
+    weights[0]+=lrate*delta0
+    weights[1]+=lrate*delta1    
+    weights[2]+=lrate*delta2    
+    weights[3]+=lrate*delta3
+
+    return weights 
+
     
     
 def save_weights():
@@ -98,12 +124,15 @@ if __name__ =='__main__':
     test_img = np.zeros((20,20))
     
     weights = initialize_weights()
-    for i in range(3200):
+    for i in range(3):
         result = run_network(test_img,weights)
     
     print(result)
+    
+    y = np.zeros(10)
+    y[2] = 1
 
-
+    weights = upgrade_network(test_img,y,weights,lrate =0.001)
 
 
 
