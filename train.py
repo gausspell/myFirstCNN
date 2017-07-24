@@ -198,8 +198,17 @@ def upgrade_network(x_batch,y_batch,weights,lrate):
 
     
     
-def save_weights():
-    print('todo')
+def save_weights(weights,path):
+    np.savez_compressed(path+'w0.npz',weights[0])
+    np.savez_compressed(path+'w1.npz',weights[1])
+    np.savez_compressed(path+'w20.npz',weights[2][0])
+    np.savez_compressed(path+'w21.npz',weights[2][1])
+    np.savez_compressed(path+'w30.npz',weights[3][0])
+    np.savez_compressed(path+'w31.npz',weights[3][1])
+    
+    print('Saving done')
+
+        
 
 def train():
     print('todo')
@@ -231,12 +240,14 @@ if __name__ =='__main__':
     #weights = upgrade_network(test_img,y,weights,lrate =0.001)
     
     x_train,y_train,x_test,y_test = load_mnist_data()
+    
     weights = initialize_weights()
+    
     lrate =0.1
-    epochs = 50
+    epochs = 60
     decay = lrate/epochs
-    print(y_train[0])
-    print('LOSS >> '+str(cross_entropy(y_train[0],result)))
+    
+
     for e in range(epochs):
         print('<>'*10)
         print('epoch '+ str(e))
@@ -247,6 +258,8 @@ if __name__ =='__main__':
                 print('Loss explosion')
                 break
         print('LOSS >> '+str(LOSS))
+        if i%10==0:
+            save_weights(weights,'models/')
         evaluate(x_test,y_test,weights)
         lrate-=decay
 
