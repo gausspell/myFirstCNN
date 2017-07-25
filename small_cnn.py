@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jul 24 18:34:17 2017
+Code example for IIIM application
 
-@author: Antoine
+@author: Antoine Rivail
 """
 import numpy as np
 from scipy.signal import convolve2d
 from sklearn.datasets import load_digits
+import matplotlib.pyplot as plt
 
 #test function
 def delta_info(delta):
@@ -177,15 +178,6 @@ class small_cnn:
         delta2[1]/=len(x_batch)
         delta3[0]/=len(x_batch)
         delta3[1]/=len(x_batch)
-        #print(delta3[1][0])
-        #TEST
-        print('INFOS'+'>>'*10)
-        #delta_info(delta0)
-        #delta_info(delta1)
-        #delta_info(delta2[0])
-        #delta_info(delta2[1])
-        #delta_info(delta3[0])
-        print(model.predict(x_batch))
         
         
         #weight update
@@ -198,9 +190,8 @@ class small_cnn:
         delta_info(weights[3][0])
 
         return weights,LOSS    
-
        
-
+    #weight initialization
     def initialize_weights(self):
         alpha0 = 0.5
         self.weights.append(alpha0*np.random.sample((16,3,3))-alpha0/2)
@@ -211,6 +202,7 @@ class small_cnn:
         alpha0 = 0.5
         self.weights.append([alpha0*np.random.sample((32,10))-0.5*alpha0,alpha0*np.random.sample(10)-0.5*alpha0])
 
+    #training method
     def train(self,data,labels,test_data,test_labels,initial_lrate=0.05,epochs = 50):
         
         BATCH_SIZE = 64
@@ -219,25 +211,38 @@ class small_cnn:
         lrate = initial_lrate
         decay = initial_lrate/epochs       
         
-        
+        #epochs loop, the model sees whole dataset in each loop
         for e in range(epochs):
             print('<>'*10)
             print('epoch '+ str(e)+'/'+str(epochs))
-            previous_loss = 100.
+            
             for i in range(n_batch):
                 self.weights,LOSS =self._upgrade_network(data[BATCH_SIZE*i:BATCH_SIZE*(i+1)],labels[BATCH_SIZE*i:BATCH_SIZE*(i+1)],self.weights,lrate=lrate)
+                
                 if LOSS>100:
                     print('Loss explosion')
                     break
-
             print('LOSS >> '+str(LOSS))
+            #autosave
             if e%10==0:
                 self.save_weights('models/autosave2-ep'+str(e))
+            
+            #test accuracy is computed at every epoch to watch convergence
             self.evaluate(test_data,test_labels)
             lrate-=decay
+            
+    #load weights from a previous training       
+    def load_weights(self,path,alias):
+        
+        self.initialize_weights()
+        
+        self.weights[0]=np.load(path+alias+'w0.npz')['arr_0']
+        self.weights[1]=np.load(path+alias+'w1.npz')['arr_0']
+        self.weights[2]=[np.load(path+alias+'w20.npz')['arr_0'],np.load(path+alias+'w21.npz')['arr_0']]
+        self.weights[3]=[np.load(path+alias+'w30.npz')['arr_0'],np.load(path+alias+'w31.npz')['arr_0']]
         
 
-
+    #outputs prediction vector (probabilities) for an image
     def predict(self,x):
         #architecture
         #conv1
@@ -279,21 +284,33 @@ class small_cnn:
         
 if __name__=='__main__':
     
-
-    
-
-    
+    #data loading with sklearn 
     data_train,label_train,data_test,label_test = load_mnist_data()
-    print(np.mean(data_train),np.mean(data_test))
-    print(np.std(data_train),np.std(data_test))
-    
+
+        
     model = small_cnn()
-    model.initialize_weights()
-    model.train(data_train,label_train,data_test,label_test,initial_lrate=0.01,epochs=50)
     
-    model.save_weights('weights/model2-')
+    #training (already done)
+    #model.initialize_weights()
+    #model.train(data_train,label_train,data_test,label_test,initial_lrate=0.01,epochs=50)    
+    #•model.save_weights('weights/model2-')
     
-    ypred = np.argmax(model.predict(data_test[0]))
+    #weight loading
+    model.load_weights('weights/','autosave2-ep30')
+    
+    #Accuracies
+    print('Train dataset')
+    model.evaluate(data_train,label_train)
+    print('Test dataset')
+    model.evaluate(data_test,label_test)
+    
+    #display random image from the test dataset
+    rand_index = np.random.randint(0,296)
+    im1 = data_test[rand_index]
+    plt.imshow(im1)
+    plt.title('true label '+str(np.argmax(label_test[rand_index]))+' predicted label '+str(np.argmax(model.predict(data_test[rand_index]))))
+    plt.show()
+    
     
     
     
